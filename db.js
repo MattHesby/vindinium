@@ -1,6 +1,6 @@
+var fs = require('fs');
 var mongoose = require('mongoose');
-var debug = require('debug')('app:mongo');
-mongoose.connect('mongodb://127.0.0.1:27017/vind');
+mongoose.connect('mongodb://localhost/vind');
 
 var BotSchema = mongoose.Schema({
   name: {type: String, default: '', unique: true},
@@ -13,14 +13,13 @@ var Bot = mongoose.model('Bot', BotSchema);
 
 mongoose.connection.on('error', console.error.bind(console, 'connection error:'));
 
-var bot = new Bot({name: 'test', code: "console.log('hi');"});
+// Grabs the code from the test.js file to be used for default/starter bot code
+var defaultCode = fs.readFileSync('test.js', 'utf8');
 
+var bot = new Bot({name: 'default', code: defaultCode})
 Bot.count({}).exec().then(function(c) {
-  debug('Count: '+c);
   if(c < 1) {
-    bot.save().then(function(err, bot) {
-      debug('bot saved');
-    });
+    bot.save();
   }
 }).then(null, function(err) {
   console.log(err);

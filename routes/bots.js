@@ -9,6 +9,16 @@ var err = function(err) {
   console.log(err);
 };
 
+function canViewBot(req, res, next) {
+  User.findById(req.user._id).exec().then(function(user) {
+    if(user.admin || user.bots.indexOf(req.params.id) > -1) {
+      next();
+    } else {
+      res.redirect('/bots');
+    }
+  }).then(null, err);
+}
+
 /* @GET index for bots */
 router.get('/', function(req, res) {
   User.findById(req.user._id).exec().then(function(user) {
@@ -18,7 +28,7 @@ router.get('/', function(req, res) {
       });
     } else {
       Bot.find({
-        '_id': { $in: user.bots}
+        '_id': { $in: user.bots }
       }).exec().then(function(bots) {
         res.render('bots/index', {bots: bots,bot:true});
       });
@@ -32,27 +42,32 @@ router.get('/create', function(req, res) {
 
 router.post('/create', function(req, res) {
   User.findById(req.user._id).exec().then(function(user) {
-    var bot = new Bot({
-      name: req.body.botName,
-      code:"var Bot = require('bot');\n\nvar bot = new Bot('YOUR_KEY_HERE', 'training');",
-      owner: req.user
+    Bot.findOne({name: 'default'}).exec().then(function(defaultBot){
+      var bot = new Bot({
+        name: req.body.botName,
+        code: defaultBot.code,
+        owner: {
+          id: req.user._id,
+          username: req.user.username
+        }
+      });
+      user.bots.push(bot._id);
+      bot.save();
+      user.save();
+      res.redirect('/bots/'+bot._id);
     });
-    bot.save();
-    user.bots.push(bot._id);
-    user.save();
-    res.redirect('/bots/'+bot._id, {bot:true});
   });
 });
 
 /* @GET show dahsboard for :id */
-router.get('/dashboard/:id', function(req, res) {
+router.get('/dashboard/:id', canViewBot, function(req, res) {
   Bot.findById(req.params.id).exec().then(function(bot) {
     res.render('bots/dashboard', {bot:bot});
   }).then(null, err);
 });
 
 /* @GET show edit for :id */
-router.get('/edit/:id', function(req, res) {
+router.get('/edit/:id', canViewBot, function(req, res) {
   Bot.findById(req.params.id).exec().then(function(bot) {
     res.render('bots/editor', {bot: bot});
   }).then(null, err);

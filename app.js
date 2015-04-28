@@ -35,7 +35,7 @@ app.use(bodyParser.urlencoded({ extended: false }));
 // parse cookies
 app.use(cookieParser());
 // passport things
-app.use(session({secret: 'iz secret'}));
+app.use(session({secret: 'iz secret', saveUninitialized: true, resave: true}));
 app.use(passport.initialize());
 app.use(passport.session());
 // use less stylesheets
@@ -52,6 +52,16 @@ app.use(function (req, res, next) {
   res.locals.login = req.isAuthenticated();
   if(req.isAuthenticated()) {
     res.locals.user = req.user;
+  }
+  if(req.isAuthenticated() && req.user.admin) {
+    res.locals.admin = true;
+    res.locals.pid = process.pid;
+    if(app.get('worker')) {
+      res.locals.worker = {
+        id: app.get('worker'),
+        count: require('os').cpus().length
+      };
+    }
   }
   next();
 });
